@@ -1,18 +1,18 @@
 /*
 
 
-• Catracks IDs
-• First Name
-• Last Name
-• Country
-• Program
-• Gift Officer, if they have one
-• Kellogg Alumni Board of Asia (Y/N)
-• GAB (Y/N)
-• Trustee (Y/N)
-• No Email Code (Y/N)
-• No Contact Code (Y/N)
-•     Include KSM alumni that have a business address in the requested countries even if their household address is not located in them
+â€¢ Catracks IDs
+â€¢ First Name
+â€¢ Last Name
+â€¢ Country
+â€¢ Program
+â€¢ Gift Officer, if they have one
+â€¢ Kellogg Alumni Board of Asia (Y/N)
+â€¢ GAB (Y/N)
+â€¢ Trustee (Y/N)
+â€¢ No Email Code (Y/N)
+â€¢ No Contact Code (Y/N)
+â€¢     Include KSM alumni that have a business address in the requested countries even if their household address is not located in them
 
 */
 
@@ -110,9 +110,6 @@ where f.contact_type_code = 'V'
 and f.credited = '0000804796'
 group by f.id_number
 ),
-
---- Manually adding Leontine Chuang,
---- Anderson and Imelda  Tanoto
 
 l as (select entity.id_number
 from entity
