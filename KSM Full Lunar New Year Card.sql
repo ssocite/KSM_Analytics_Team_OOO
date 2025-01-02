@@ -219,7 +219,7 @@ left join hh on hh.id_number = h.id_number
 left join b on b.id_number = h.id_number
 --- Dean's Visits on the card
 left join dean on dean.id_number = h.id_number
---- Manually adding Leontine Denise Chuang #282677
+--- Manually adding IDs reccomended 
 left join l on l.id_number = h.id_number
 --- Club member in ad hoc countries
 left join club on club.id_number = h.id_number
