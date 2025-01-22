@@ -1,46 +1,17 @@
-/* Enviroment subquery
+--- KSM alumni
+with h as (select *
+from rpt_pbh634.v_entity_ksm_households
+where rpt_pbh634.v_entity_ksm_households.PROGRAM is not null),
 
-Energy and Sustainability Industries
-Environmental Services
-Oil & Energy
-Paper & Forest Products
-Recreational Facilities and Services
-Renewables & Environment
-Utilities
-
-*/
-
-with m as (select
-a.fld_of_work_code,
-       a.short_desc,
-       a.industry_group,
-       a.AGR,
-       a.ART,
-       a.CONS,
-       a.CORP,
-       a.EDU,
-       a.FIN,
-       a.GOODS,
-       a.GOVT,
-       a.HLTH,
-       a.LEG,
-       a.MAN,
-       a.MED,
-       a.ORG,
-       a.REC,
-       a.SERV,
-       a.TECH,
-       a.TRAN
-from v_industry_groups a
-where a.fld_of_work_code IN ('L38','L98','L103','L121','L123','L139')),
-
--- General Employment and identifying the C-Suites
+--- employment in education
 
 employ As (
   Select id_number
   , job_title
   , employment.fld_of_work_code
   , fow.short_desc As fld_of_work
+  , employment.fld_of_spec_code1
+  ,tms_fld_of_spec.short_desc as fld_spec
   , employer_name1,
     -- If there's an employer ID filled in, use the entity name
     Case
@@ -54,32 +25,75 @@ employ As (
   From employment
   Left Join tms_fld_of_work fow
        On fow.fld_of_work_code = employment.fld_of_work_code
+       Left Join tms_fld_of_spec
+       on tms_fld_of_spec.fld_of_spec_code = employment.fld_of_spec_code1
   Where employment.primary_emp_ind = 'Y'),
 
+---- Interest: Social Impact
+--- L18: Civic & Social Organization
+--- L38: Environmental Services
+--- L53: Government Relations
+--- L59: Human Resources
+--- L61: Individual & Family Services
+--- L66: International Affairs
+--- L71: Judiciary
+--- L72: Law Enforcement
+--- L73: Law Practice
+--- L74: Legal Services
+--- L75: Legislative Office
+--- L93: Museums and Institutions
+--- L97: Non-Profit Organization Management
+--- L106: Philanthropy
+--- L114: Public Policy
+--- L115: Public Relations and Communications
+--- L116: Public Safety
+--- L123: Renewables & Environment
 
---- create an interest view
+--- Field of Specialty
+--- L14 Law - Environmental Law
+--- 004 - Engineering - Environmental
+--- SUS - Sustainability & Cleantech
+--- 315 - Manufacturing Plant - Green Mfg
+--- 041 - Biological Sciences
 
-i as (select *
-from nu_ksm_v_datamart_career_inter
---- Only want the enviromental Industries
-inner join m on m.fld_of_work_code =  nu_ksm_v_datamart_career_inter.interest_code),
+emfin as (select *
+  from employ
+where  (Employ.fld_of_work_code IN ('L18', 'L53', 'L59', 'L61', 'L66','L71','L73', 'L72',
+'L74', 'L75', 'L38', 'L123', 'L93','L97','L106','L109','L114','L115','L116')
+or employ.fld_of_spec_code1 IN ('L14','004','SUS','315','041')
+or Employ.job_title like '%Social%'
+or Employ.job_title like '%Responsibility%'
+or employ.job_title like '%Impact%'
+or employ.job_title like '%Fund%'
+or employ.job_title like '%Ethic%'
+or Employ.job_title like '%Enviroment%'
+or employ.job_title like '%Renew%'
+or employ.job_title like '%Recycle%'
+or employ.job_title like '%Recycling%'
+or employ.job_title like '%Solar%'
+or employ.job_title like '%Wind%'
+or employ.job_title like '%Bio%'
+or employ.job_title like '%Green%'
+)),
 
---- Concatanate that interest Query
 
---- This is the final interest list, which will concatanated interests
-final_i as  (Select
-    intr.catracks_id
-    , Listagg(intr.interest_desc, '; ') Within Group (Order By interest_start_date Asc, interest_desc Asc)
-      As interests_concat
-  From i intr
-  Group By intr.catracks_id),
+KSM_Spec AS (Select spec.ID_NUMBER,
+       spec.SPECIAL_HANDLING_CONCAT,
+       spec.GAB,
+       spec.TRUSTEE,
+       spec.EBFA,
+       spec.NO_CONTACT,
+       spec.NO_PHONE_IND,
+       spec.NO_EMAIL_IND,
+       spec.NO_MAIL_IND
+From rpt_pbh634.v_entity_special_handling spec),
 
---- Final employer
---- This will pull/create flag in C Suites
-
-final_e as (select *
-from employ
-inner join m on m.fld_of_work_code = employ.fld_of_work_code),
+assignment as (select assign.id_number,
+       assign.prospect_manager,
+       assign.lgos,
+       assign.managers,
+       assign.curr_ksm_manager
+from rpt_pbh634.v_assignment_summary assign),
 
 linked as (select distinct ec.id_number,
 max(ec.start_dt) keep(dense_rank First Order By ec.start_dt Desc, ec.econtact asc) As Max_Date,
@@ -87,67 +101,36 @@ max (ec.econtact) keep(dense_rank First Order By ec.start_dt Desc, ec.econtact a
 from econtact ec
 where  ec.econtact_status_code = 'A'
 and  ec.econtact_type_code = 'L'
-Group By ec.id_number),
+Group By ec.id_number)
 
-Spec AS (Select rpt_pbh634.v_entity_special_handling.ID_NUMBER,
-       rpt_pbh634.v_entity_special_handling.GAB,
-       rpt_pbh634.v_entity_special_handling.TRUSTEE,
-       rpt_pbh634.v_entity_special_handling.NO_CONTACT,
-       rpt_pbh634.v_entity_special_handling.NO_SOLICIT,
-       rpt_pbh634.v_entity_special_handling.NO_PHONE_IND,
-       rpt_pbh634.v_entity_special_handling.NO_EMAIL_IND,
-       rpt_pbh634.v_entity_special_handling.NO_MAIL_IND,
-       rpt_pbh634.v_entity_special_handling.SPECIAL_HANDLING_CONCAT,
-       rpt_pbh634.v_entity_special_handling.EBFA
-From rpt_pbh634.v_entity_special_handling)
-
-
-select house.ID_NUMBER,
-       house.REPORT_NAME,
-       entity.gender_code,
-       house.RECORD_STATUS_CODE,
-       house.FIRST_KSM_YEAR,
-       house.PROGRAM,
-       house.PROGRAM_GROUP,
-       house.HOUSEHOLD_CITY,
-       house.HOUSEHOLD_STATE,
-       employ.job_title,
-       employ.employer_name,
-       employ.fld_of_work as employment_industry,
-       final_e.fld_of_work as employment_energy_industry_ind,
-       final_i.interests_concat as energy_interest_concat,
-case when employ.fld_of_work is null and final_i.interests_concat is null then 'Y' end as Other_Energy_IND,
-       linked.linkedin_address
-
-from rpt_pbh634.v_entity_ksm_households house
-inner join employ on employ.id_number = house.ID_NUMBER
-left join entity on entity.id_number = house.ID_NUMBER
-left join final_i on final_i.catracks_id = house.id_number
-left join final_e on final_e.id_number = house.id_number
-left join linked on linked.id_number = house.id_number
-left join spec on spec.id_number = house.id_number
-where house.PROGRAM is not null
-and (
---- Industry/Interest in Enviromental Industries
-final_i.catracks_id is not null
-or final_e.id_number is not null
---- Enviroment and sustainable company
-or employ.employer_name like '%Petroleum%'
-or employ.employer_name like '%Natural%'
-or employ.employer_name like '%Enviroment%'
-or employ.employer_name like '%Renew%'
-or employ.employer_name like '%Energy%'
-or employ.employer_name like '%Oil%'
-or employ.employer_name like '%Gas%'
-or employ.employer_name like '%Solar%'
-or employ.employer_name like '%Sun%'
-or employ.employer_name like '%Weather%'
-or employ.employer_name like '%Climate%'
-or employ.employer_name like '%Utility%'
-or employ.employer_name like '%Electric%'
-or employ.employer_name like '%Water%'
-or employ.employer_name like '%Wind%')
---- No Contact/No Email
-and  (spec.NO_CONTACT is null
-and    spec.NO_EMAIL_IND is null)
-order by house.REPORT_NAME ASC
+SELECT e.id_number,
+e.first_name,
+e.last_name,
+e.record_type_code,
+e.record_status_code,
+e.institutional_suffix,
+e.gender_code,
+h.FIRST_KSM_YEAR,
+h.PROGRAM,
+h.PROGRAM_GROUP,
+h.HOUSEHOLD_CITY,
+h.HOUSEHOLD_STATE,
+h.HOUSEHOLD_GEO_PRIMARY_DESC,
+emfin.job_title,
+emfin.employer_name,
+emfin.fld_of_work as employment_industry,
+emfin.fld_spec as employment_fld_specialty,
+KSP.NO_CONTACT,
+KSP.NO_EMAIL_IND,
+a.prospect_manager,
+a.lgos,
+l.linkedin_address
+FROM ENTITY e
+inner join h on h.id_number = e.id_number
+inner join emfin on emfin.id_number = e.id_number
+left join KSM_Spec KSP on KSP.id_number = e.id_number
+left join assignment a on a.id_number = e.id_number
+left join linked l on l.id_number = e.id_number
+where (KSP.NO_CONTACT is null
+and KSP.NO_EMAIL_IND is null)
+order by e.last_name asc
