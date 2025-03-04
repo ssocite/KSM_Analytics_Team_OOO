@@ -29,24 +29,6 @@ employ As (
        on tms_fld_of_spec.fld_of_spec_code = employment.fld_of_spec_code1
   Where employment.primary_emp_ind = 'Y'),
 
----- Interest: Social Impact
---- L18: Civic & Social Organization
---- L38: Environmental Services
---- L53: Government Relations
---- L59: Human Resources
---- L61: Individual & Family Services
---- L66: International Affairs
---- L71: Judiciary
---- L72: Law Enforcement
---- L73: Law Practice
---- L74: Legal Services
---- L75: Legislative Office
---- L93: Museums and Institutions
---- L97: Non-Profit Organization Management
---- L106: Philanthropy
---- L114: Public Policy
---- L115: Public Relations and Communications
---- L116: Public Safety
 --- L123: Renewables & Environment
 
 --- Field of Specialty
@@ -58,23 +40,38 @@ employ As (
 
 emfin as (select *
   from employ
-where  (Employ.fld_of_work_code IN ('L18', 'L53', 'L59', 'L61', 'L66','L71','L73', 'L72',
-'L74', 'L75', 'L38', 'L123', 'L93','L97','L106','L109','L114','L115','L116')
-or employ.fld_of_spec_code1 IN ('L14','004','SUS','315','041')
-or Employ.job_title like '%Social%'
-or Employ.job_title like '%Responsibility%'
-or employ.job_title like '%Impact%'
-or employ.job_title like '%Fund%'
-or employ.job_title like '%Ethic%'
-or Employ.job_title like '%Enviroment%'
+  --- Renewables & Environment
+  --- Environmental Services
+where  (Employ.fld_of_work_code IN ('L123','L38')
+--- Law - Environmental Law
+--- Engineering - Environmental
+--- Sustainability & Cleantech
+--- Manufacturing Plant - Green Mfg
+---
+or employ.fld_of_spec_code1 IN ('L14','004','SUS','315')
+or Employ.job_title like '%Environment%'
 or employ.job_title like '%Renew%'
 or employ.job_title like '%Recycle%'
 or employ.job_title like '%Recycling%'
 or employ.job_title like '%Solar%'
-or employ.job_title like '%Wind%'
 or employ.job_title like '%Bio%'
 or employ.job_title like '%Green%'
+or Employ.employer_name like '%Environment%'
+or employ.employer_name like '%Renew%'
+or employ.employer_name like '%Recycle%'
+or employ.employer_name like '%Recycling%'
+or employ.employer_name like '%Solar%'
+or employ.employer_name like '%Bio%'
+or employ.employer_name like '%Green%'
 )),
+
+--- interest or Environmental Services - Renewables & Environment
+i AS (select Distinct interest.id_number,
+Listagg (i.short_desc, ';  ') Within Group (Order By i.short_desc) As short_desc
+from interest
+left join tms_interest i on i.interest_code = interest.interest_code
+where interest.interest_code IN ('L38','LRN')
+group by interest.id_number),
 
 
 KSM_Spec AS (Select spec.ID_NUMBER,
@@ -107,7 +104,7 @@ SELECT e.id_number,
 e.first_name,
 e.last_name,
 e.record_type_code,
-e.record_status_code,
+---e.record_status_code,
 e.institutional_suffix,
 e.gender_code,
 h.FIRST_KSM_YEAR,
@@ -116,10 +113,11 @@ h.PROGRAM_GROUP,
 h.HOUSEHOLD_CITY,
 h.HOUSEHOLD_STATE,
 h.HOUSEHOLD_GEO_PRIMARY_DESC,
-emfin.job_title,
-emfin.employer_name,
-emfin.fld_of_work as employment_industry,
-emfin.fld_spec as employment_fld_specialty,
+employ.job_title,
+employ.employer_name,
+employ.fld_of_work as employment_industry,
+employ.fld_spec as employment_fld_specialty,
+i.short_desc as interest,
 KSP.NO_CONTACT,
 KSP.NO_EMAIL_IND,
 a.prospect_manager,
@@ -127,10 +125,14 @@ a.lgos,
 l.linkedin_address
 FROM ENTITY e
 inner join h on h.id_number = e.id_number
-inner join emfin on emfin.id_number = e.id_number
+left join employ on employ.id_number = e.id_number
+left join emfin on emfin.id_number = e.id_number
 left join KSM_Spec KSP on KSP.id_number = e.id_number
 left join assignment a on a.id_number = e.id_number
 left join linked l on l.id_number = e.id_number
-where (KSP.NO_CONTACT is null
-and KSP.NO_EMAIL_IND is null)
+left join i on i.id_number = e.id_number
+where (KSP.NO_CONTACT is null)
+--- employed in environment OR interested in environment
+and (emfin.id_number is not null
+or i.id_number is not null)
 order by e.last_name asc
